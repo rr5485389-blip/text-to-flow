@@ -30,6 +30,7 @@ import {
   Globe
 } from 'lucide-react';
 import { copySvgToClipboard, generateFigmaSvg } from './utils/figmaExporter';
+import { fallbackTextAnalyzer } from './utils/fallbackAnalyzer';
 
 export default function App() {
   const [workflow, setWorkflow] = useState<WorkflowSpec | null>(null);
@@ -129,7 +130,7 @@ export default function App() {
     setDrawerInitialEdit(true);
   };
 
-  // Trigger analysis via backend API
+  // Trigger analysis via backend API with instant browser fallback
   const handleAnalyze = async (
     text: string,
     fileName?: string,
@@ -139,41 +140,70 @@ export default function App() {
     setError(null);
     setAnalyzingStep('Reading and parsing specification text...');
 
+    const stepTimer1 = setTimeout(() => {
+      setAnalyzingStep('Extracting decision logic, actors & state transitions...');
+    }, 500);
+
+    const stepTimer2 = setTimeout(() => {
+      setAnalyzingStep('Calculating non-overlapping auto-layout and Figma vectors...');
+    }, 1000);
+
     try {
-      const stepTimer1 = setTimeout(() => {
-        setAnalyzingStep('Extracting decision logic, actors & state transitions...');
-      }, 700);
+      let extractedWorkflow: WorkflowSpec | null = null;
 
-      const stepTimer2 = setTimeout(() => {
-        setAnalyzingStep('Calculating non-overlapping auto-layout and Figma vectors...');
-      }, 1400);
+      // Try server-side AI analysis if backend is reachable
+      try {
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text,
+            fileName,
+            options: { direction },
+          }),
+        });
 
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text,
-          fileName,
-          options: { direction },
-        }),
-      });
+        if (response.ok) {
+          const contentType = response.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            const data: AnalyzeResponse = await response.json();
+            if (data.success && data.workflow) {
+              extractedWorkflow = data.workflow;
+            }
+          }
+        }
+      } catch (networkErr) {
+        console.warn('[API Notice]: Backend service not directly reachable, generating instant visual layout in browser:', networkErr);
+      }
+
+      // If backend was not reachable or returned an error, use the deterministic browser layout parser!
+      if (!extractedWorkflow) {
+        extractedWorkflow = fallbackTextAnalyzer(text, fileName, direction);
+      }
 
       clearTimeout(stepTimer1);
       clearTimeout(stepTimer2);
 
-      const data: AnalyzeResponse = await response.json();
-
-      if (data.success && data.workflow) {
-        setWorkflow(data.workflow);
+      if (extractedWorkflow) {
+        setWorkflow(extractedWorkflow);
         setSelectedNode(null);
         setActiveTab('canvas');
       } else {
-        setError(data.error || 'Failed to extract workflow from text.');
+        setError('Failed to extract workflow from text.');
       }
     } catch (err: any) {
       console.error('[Analyze Error]:', err);
-      setError(err.message || 'Network error communicating with analysis agent.');
+      try {
+        const fallback = fallbackTextAnalyzer(text, fileName, direction);
+        setWorkflow(fallback);
+        setSelectedNode(null);
+        setActiveTab('canvas');
+      } catch (fallbackErr: any) {
+        setError(err.message || 'Network error communicating with analysis agent.');
+      }
     } finally {
+      clearTimeout(stepTimer1);
+      clearTimeout(stepTimer2);
       setIsAnalyzing(false);
     }
   };
