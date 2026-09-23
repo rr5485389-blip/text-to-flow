@@ -1,0 +1,6 @@
+{
+  "name": "Text to Figma Workflow Agent",
+  "description": "Analyzes text specification files and technical logic with Gemini to generate interactive visual workflows with direct Figma copy-paste and REST API integration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
