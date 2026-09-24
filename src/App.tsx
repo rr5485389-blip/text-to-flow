@@ -14,7 +14,7 @@ import { AnalysisInsights } from './components/AnalysisInsights';
 import { NodeDetailDrawer } from './components/NodeDetailDrawer';
 import { FigmaIntegrationPanel } from './components/FigmaIntegrationPanel';
 import { DirectFigmaSyncViewer } from './components/DirectFigmaSyncViewer';
-import WelcomeScreen from "./components/welcomesvreen";
+import WelcomeScreen from "./components/welcomescreen";
 import { 
 
   Layers,
