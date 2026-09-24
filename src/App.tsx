@@ -14,7 +14,9 @@ import { AnalysisInsights } from './components/AnalysisInsights';
 import { NodeDetailDrawer } from './components/NodeDetailDrawer';
 import { FigmaIntegrationPanel } from './components/FigmaIntegrationPanel';
 import { DirectFigmaSyncViewer } from './components/DirectFigmaSyncViewer';
-import {
+import WelcomeScreen from "./components/welcomesvreen";
+import { 
+
   Layers,
   Smartphone,
   Sparkles,
@@ -45,7 +47,19 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [copiedFigma, setCopiedFigma] = useState<boolean>(false);
   const [drawerInitialEdit, setDrawerInitialEdit] = useState<boolean>(false);
-
+  const [showWelcome, setShowWelcome] = useState(true);
+  const [userName, setUserName] = useState("");
+  
+  if (showWelcome) {
+    return (
+      <WelcomeScreen
+        onGetStarted={(name) => {
+          setUserName(name);
+          setShowWelcome(false);
+        }}
+      />
+    );
+  }
   // Move node coordinates
   const handleMoveNode = (nodeId: string, x: number, y: number) => {
     setWorkflow((prevWf) => {
